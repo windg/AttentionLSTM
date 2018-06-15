@@ -1,3 +1,4 @@
+# http://colah.github.io/posts/2015-08-Understanding-LSTMs/
 from __future__ import print_function, division
 import numpy as np
 import tensorflow as tf
@@ -9,12 +10,12 @@ from numpy import argmax
 n_features = 50
 n_timesteps_in = 5
 n_timesteps_out = 5
+n_cell = 3
 
 num_epochs = 100
 total_series_length = 50000
 truncated_backprop_length = 15
 state_size = 4
-num_class = 2
 echo_step = 3
 batch_size = 4
 num_batches = total_series_length//batch_size//truncated_backprop_length
@@ -57,29 +58,102 @@ def weight_variable(shape):
     initial = np.random.rand(shape[0], shape[1])
     return tf.Variable(initial,dtype=tf.float32)
 def bias_variable(shape):
-    initial = np.zeros((1,shape))
+    initial = np.zeros((1, shape))
     return tf.Variable(initial,dtype=tf.float32)
+def LSTMAttention(input, cells):
+    batchsize, timesteps, input_dim = input.get_shape().as_list()
 
-def LSTM(input, cells):
-    timesteps, input_dim = input.shape
-    # print(input)
-    inputs_series = tf.unstack(input, axis=0)
-    Wf = weight_variable(shape=[cells,input_dim])
-
+    inputs_series = tf.unstack(input, axis=1)
+    # Variables for LSTM
+    Wf = weight_variable(shape=[input_dim + cells, cells])
     bf = bias_variable(shape=cells)
+    Wi = weight_variable(shape=[input_dim + cells, cells])
+    bi = bias_variable(shape=cells)
+    Wc = weight_variable(shape=[input_dim + cells, cells])
+    bc = bias_variable(shape=cells)
+    Wo = weight_variable(shape=[input_dim + cells, cells])
+    bo = bias_variable(shape=cells)
+    # Variable for attention model
+    Va = weight_variable(shape=[input_dim,1])
+    Wa = weight_variable(shape=[cells, input_dim])
+    ba = bias_variable(shape=input_dim)
+    Ua = weight_variable(shape=[input_dim, input_dim])
+    # print(input_dim)
+    embed = tf.reshape(input,[-1, input_dim])
+    # print(embed.shape)
+    embed = tf.matmul(embed, Ua)
+    # print(embed.shape)
+    # embed = tf.reshape(embed,[batch_size,timesteps,input_dim])
+    # print(embed.shape)
+
+
+    init_output = tf.placeholder(tf.float32, [batchsize, cells])
+    init_state = tf.placeholder(tf.float32, [batchsize, cells])
+    current_state = init_state
+    h = init_output
     for current_input in inputs_series:
+        # print(type(current_input))
+        # current_input = tf.reshape(current_input, [batch_size, n_features])
+        expanded_state = tf.tile(current_state, [timesteps,1])
 
-        current_input = tf.reshape(current_input, [n_features, 1])
+        e = tf.tanh(tf.matmul(expanded_state, Wa) + embed)
 
-        mdl = tf.matmul(Wf,current_input)
-    return mdl
+        e = tf.matmul(e,tf.tile(Va, multiples=[1, input_dim]))
+        e = tf.reshape(e,[batch_size,timesteps,-1])
+
+        a = tf.nn.softmax(e,dim=1)
+        # print(a.shape)
+        c = tf.reduce_sum(tf.multiply(a,input),axis=1)
+        # print(c.shape)
+        stacked_input_h = tf.concat([c, h], axis=1)
+
+        f = tf.sigmoid(tf.matmul(stacked_input_h, Wf) + bf)
+        i = tf.sigmoid(tf.matmul(stacked_input_h, Wi) + bi)
+        C_tilda = tf.tanh(tf.matmul(stacked_input_h, Wc) + bc)
+        current_state = tf.multiply(f, current_state) + tf.multiply(i, C_tilda)
+        o = tf.sigmoid(tf.matmul(stacked_input_h, Wo) + bo)
+        h = tf.multiply(o, tf.tanh(current_state))
+    return h
+
+
+def LSTM(input, cells, return_sequences=False):
+    batchsize, timesteps, input_dim = input.shape
+    # print(input)
+    inputs_series = tf.unstack(input, axis=1)
+    # Variables for LSTM
+
+    Wf = weight_variable(shape=[input_dim+cells , cells])
+    bf = bias_variable(shape=cells)
+    Wi = weight_variable(shape=[input_dim+cells, cells])
+    bi = bias_variable(shape=cells)
+    Wc = weight_variable(shape=[input_dim+cells, cells])
+    bc = bias_variable(shape=cells)
+    Wo = weight_variable(shape=[input_dim+cells, cells])
+    bo = bias_variable(shape=cells)
+
+    init_output = tf.placeholder(tf.float32,[batchsize, cells])
+    init_state = tf.placeholder(tf.float32,[batchsize, cells])
+    current_state = init_state
+    h = init_output
+    for current_input in inputs_series:
+        # print(current_input.shape)
+        # current_input = tf.reshape(current_input, [batch_size, n_features])
+        stacked_input_h = tf.concat([current_input, h],axis=1)
+
+        f = tf.sigmoid(tf.matmul(stacked_input_h, Wf) + bf)
+        i = tf.sigmoid(tf.matmul(stacked_input_h, Wi) + bi)
+        C_tilda  = tf.tanh(tf.matmul(stacked_input_h, Wc) + bc)
+        current_state = tf.multiply(f, current_state) + tf.multiply(i, C_tilda)
+        o = tf.sigmoid(tf.matmul(stacked_input_h, Wo) + bo)
+        h = tf.multiply(o, tf.tanh(current_state))
+    return h
 
 
 # X, y = get_pair(n_timesteps_in, n_timesteps_out, n_features)
 # print(X.shape)
-batchX_placeholder = tf.placeholder(tf.float32, [n_timesteps_in, n_features])
+batchX_placeholder = tf.placeholder(tf.float32, [batch_size, n_timesteps_in, n_features])
+# print(batchX_placeholder)
+batchY_placeholder = tf.placeholder(tf.int32, [batch_size, n_timesteps_out, n_features])
 
-batchY_placeholder = tf.placeholder(tf.int32, [n_timesteps_out, n_features])
-
-mdl = LSTM(batchX_placeholder, 3)
+mdl = LSTMAttention(batchX_placeholder, n_cell)
 print(mdl)
