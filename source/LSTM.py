@@ -7,18 +7,7 @@ from random import randint
 from numpy import array
 from numpy import argmax
 
-n_features = 50
-n_timesteps_in = 5
-n_timesteps_out = 5
-n_cell = 3
 
-num_epochs = 100
-total_series_length = 50000
-truncated_backprop_length = 15
-state_size = 4
-echo_step = 3
-batch_size = 4
-num_batches = total_series_length//batch_size//truncated_backprop_length
 
 # generate a sequence of random integers
 def generate_sequence(length, n_unique):
@@ -91,6 +80,7 @@ def LSTMAttention(input, cells):
     init_state = tf.placeholder(tf.float32, [batchsize, cells])
     current_state = init_state
     h = init_output
+    output = tf.expand_dims(init_output, axis=1)
     for current_input in inputs_series:
         # print(type(current_input))
         # current_input = tf.reshape(current_input, [batch_size, n_features])
@@ -99,7 +89,7 @@ def LSTMAttention(input, cells):
         e = tf.tanh(tf.matmul(expanded_state, Wa) + embed)
 
         e = tf.matmul(e,tf.tile(Va, multiples=[1, input_dim]))
-        e = tf.reshape(e,[batch_size,timesteps,-1])
+        e = tf.reshape(e,[batchsize,timesteps,-1])
 
         a = tf.nn.softmax(e,dim=1)
         # print(a.shape)
@@ -113,7 +103,8 @@ def LSTMAttention(input, cells):
         current_state = tf.multiply(f, current_state) + tf.multiply(i, C_tilda)
         o = tf.sigmoid(tf.matmul(stacked_input_h, Wo) + bo)
         h = tf.multiply(o, tf.tanh(current_state))
-    return h
+        output = tf.concat([output, tf.expand_dims(h, axis=1)], axis=1)
+    return output[:,1:,:]
 
 
 def LSTM(input, cells, return_sequences=False):
@@ -135,6 +126,7 @@ def LSTM(input, cells, return_sequences=False):
     init_state = tf.placeholder(tf.float32,[batchsize, cells])
     current_state = init_state
     h = init_output
+    output = tf.expand_dims(init_output,axis=1)
     for current_input in inputs_series:
         # print(current_input.shape)
         # current_input = tf.reshape(current_input, [batch_size, n_features])
@@ -146,14 +138,20 @@ def LSTM(input, cells, return_sequences=False):
         current_state = tf.multiply(f, current_state) + tf.multiply(i, C_tilda)
         o = tf.sigmoid(tf.matmul(stacked_input_h, Wo) + bo)
         h = tf.multiply(o, tf.tanh(current_state))
-    return h
+        output = tf.concat([output, tf.expand_dims(h, axis=1)],axis = 1)
+    return output[:,1:,:]
 
-
-# X, y = get_pair(n_timesteps_in, n_timesteps_out, n_features)
-# print(X.shape)
+n_features = 50
+n_timesteps_in = 5
+n_timesteps_out = 5
+n_cell = 30
+batch_size = 4
+#
+# # X, y = get_pair(n_timesteps_in, n_timesteps_out, n_features)
+# # print(X.shape)
 batchX_placeholder = tf.placeholder(tf.float32, [batch_size, n_timesteps_in, n_features])
 # print(batchX_placeholder)
 batchY_placeholder = tf.placeholder(tf.int32, [batch_size, n_timesteps_out, n_features])
 
-mdl = LSTMAttention(batchX_placeholder, n_cell)
+mdl = LSTM(batchX_placeholder, n_cell)
 print(mdl)
