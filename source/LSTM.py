@@ -75,9 +75,8 @@ def LSTMAttention(input, cells):
     # embed = tf.reshape(embed,[batch_size,timesteps,input_dim])
     # print(embed.shape)
 
-
-    init_output = tf.placeholder(tf.float32, [batchsize, cells])
-    init_state = tf.placeholder(tf.float32, [batchsize, cells])
+    init_output = tf.zeros([batchsize, cells])
+    init_state = tf.zeros([batchsize, cells])
     current_state = init_state
     h = init_output
     output = tf.expand_dims(init_output, axis=1)
@@ -121,9 +120,8 @@ def LSTM(input, cells, return_sequences=False):
     bc = bias_variable(shape=cells)
     Wo = weight_variable(shape=[input_dim+cells, cells])
     bo = bias_variable(shape=cells)
-
-    init_output = tf.placeholder(tf.float32,[batchsize, cells])
-    init_state = tf.placeholder(tf.float32,[batchsize, cells])
+    init_output = tf.zeros([batchsize, cells])
+    init_state = tf.zeros([batchsize, cells])
     current_state = init_state
     h = init_output
     output = tf.expand_dims(init_output,axis=1)
@@ -140,18 +138,18 @@ def LSTM(input, cells, return_sequences=False):
         h = tf.multiply(o, tf.tanh(current_state))
         output = tf.concat([output, tf.expand_dims(h, axis=1)],axis = 1)
     return output[:,1:,:]
+if __name__ == '__main__':
+    n_features = 50
+    n_timesteps_in = 5
+    n_timesteps_out = 5
+    n_cell = 30
+    batch_size = 4
+    #
+    # # X, y = get_pair(n_timesteps_in, n_timesteps_out, n_features)
+    # # print(X.shape)
+    batchX_placeholder = tf.placeholder(tf.float32, [batch_size, n_timesteps_in, n_features])
+    # print(batchX_placeholder)
+    batchY_placeholder = tf.placeholder(tf.int32, [batch_size, n_timesteps_out, n_features])
 
-n_features = 50
-n_timesteps_in = 5
-n_timesteps_out = 5
-n_cell = 30
-batch_size = 4
-#
-# # X, y = get_pair(n_timesteps_in, n_timesteps_out, n_features)
-# # print(X.shape)
-batchX_placeholder = tf.placeholder(tf.float32, [batch_size, n_timesteps_in, n_features])
-# print(batchX_placeholder)
-batchY_placeholder = tf.placeholder(tf.int32, [batch_size, n_timesteps_out, n_features])
-
-mdl = LSTM(batchX_placeholder, n_cell)
-print(mdl)
+    mdl = LSTM(batchX_placeholder, n_cell)
+    print(mdl)
