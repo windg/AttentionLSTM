@@ -42,41 +42,31 @@ def get_pair(n_in, n_out, cardinality):
     y = y.reshape((1, y.shape[0], y.shape[1]))
     return X, y
 
-def weight_variable(shape, name):
+def weight_variable(shape):
     # Random initial values
     initial = np.random.rand(shape[0], shape[1])
-    return tf.get_variable(name=name, shape=shapeinitial,dtype=tf.float32)
+    return tf.Variable(initial,dtype=tf.float32)
 def bias_variable(shape):
     initial = np.zeros((1, shape))
     return tf.Variable(initial,dtype=tf.float32)
-
-# def Attension(input, cells):
-#     batchsize, input_dim = input.get_shape().as_list()
-#
-#     Wa = weight_variable(shape=[cells, input_dim])
-#     ba = bias_variable(shape=input_dim)
-#     Va = weight_variable(shape)
-#     e = tf.tanh(tf.matmul(input, Wa)+ba)
-
-
 def LSTMAttention(input, cells):
     batchsize, timesteps, input_dim = input.get_shape().as_list()
 
     inputs_series = tf.unstack(input, axis=1)
     # Variables for LSTM
-    Wf = tf.get_variable(name='Wf', shape=[input_dim + cells, cells])
-    bf = tf.get_variable(name='bf', shape=cells)
-    Wi = tf.get_variable(name='Wi', shape=[input_dim + cells, cells])
-    bi = tf.get_variable(name='bi', shape=cells)
-    Wc = tf.get_variable(name='Wc', shape=[input_dim + cells, cells])
-    bc = tf.get_variable(name='bc',shape=cells)
-    Wo = tf.get_variable(name='Wo',shape=[input_dim + cells, cells])
-    bo = tf.get_variable(name='bo',shape=cells)
+    Wf = weight_variable(shape=[input_dim + cells, cells])
+    bf = bias_variable(shape=cells)
+    Wi = weight_variable(shape=[input_dim + cells, cells])
+    bi = bias_variable(shape=cells)
+    Wc = weight_variable(shape=[input_dim + cells, cells])
+    bc = bias_variable(shape=cells)
+    Wo = weight_variable(shape=[input_dim + cells, cells])
+    bo = bias_variable(shape=cells)
     # Variable for attention model
-    Va = tf.get_variable(name='Va',shape=[input_dim,1])
-    Wa = tf.get_variable(name='Wa',shape=[cells, input_dim])
-    ba = tf.get_variable(name='ba',shape=input_dim)
-    Ua = tf.get_variable(name='Ua',shape=[input_dim, input_dim])
+    Va = weight_variable(shape=[input_dim,1])
+    Wa = weight_variable(shape=[cells, input_dim])
+    ba = bias_variable(shape=input_dim)
+    Ua = weight_variable(shape=[input_dim, input_dim])
     # print(input_dim)
     embed = tf.reshape(input,[-1, input_dim])
     # print(embed.shape)
@@ -97,8 +87,8 @@ def LSTMAttention(input, cells):
 
         e = tf.tanh(tf.matmul(expanded_state, Wa) + embed)
 
-        e = tf.matmul(e, tf.tile(Va, multiples=[1, input_dim]))
-        e = tf.reshape(e, [batchsize,timesteps,-1])
+        e = tf.matmul(e,tf.tile(Va, multiples=[1, input_dim]))
+        e = tf.reshape(e,[batchsize,timesteps,-1])
 
         a = tf.nn.softmax(e,dim=1)
         # print(a.shape)
@@ -122,14 +112,14 @@ def LSTM(input, cells, return_sequences=False):
     inputs_series = tf.unstack(input, axis=1)
     # Variables for LSTM
 
-    Wf = tf.get_variable(name='Wf', shape=[input_dim+cells , cells])
-    bf = tf.get_variable(name='bf', shape=cells)
-    Wi = tf.get_variable(name='Wi', shape=[input_dim+cells, cells])
-    bi = tf.get_variable(name='bi', shape=cells)
-    Wc = tf.get_variable(name='Wc', shape=[input_dim+cells, cells])
-    bc = tf.get_variable(name='bc', shape=cells)
-    Wo = tf.get_variable(name='Wo', shape=[input_dim+cells, cells])
-    bo = tf.get_variable(name='bo', shape=cells)
+    Wf = weight_variable(shape=[input_dim+cells , cells])
+    bf = bias_variable(shape=cells)
+    Wi = weight_variable(shape=[input_dim+cells, cells])
+    bi = bias_variable(shape=cells)
+    Wc = weight_variable(shape=[input_dim+cells, cells])
+    bc = bias_variable(shape=cells)
+    Wo = weight_variable(shape=[input_dim+cells, cells])
+    bo = bias_variable(shape=cells)
     init_output = tf.zeros([batchsize, cells])
     init_state = tf.zeros([batchsize, cells])
     current_state = init_state

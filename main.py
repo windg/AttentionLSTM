@@ -55,7 +55,7 @@ n_timesteps_out = 2
 n_cell = 150
 batch_size = 1
 truncated_backprop_length = 15
-num_epochs = 1
+num_epochs = 5000
 # x,y = get_pair(batch_size, n_timesteps_in,n_timesteps_out, n_features)
 
 # define model
@@ -104,7 +104,6 @@ with tf.Session() as sess:
         loss_list.append(_total_loss)
 
         plot(loss_list)
-    writer = tf.summary.FileWriter('result',sess.graph)
 
 
 plt.ioff()
